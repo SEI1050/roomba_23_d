@@ -4,7 +4,7 @@ import rospy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Quaternion
 
-class ActionGoal():
+class Task1():
     def __init__(self):
         rospy.init_node('action_goal')
         self.action_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
