@@ -1,0 +1,181 @@
+#デプス画像
+import rospy
+import cv2
+import numpy as np
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+
+def mask_depth_image(depth_image, object_mask):
+    masked_depth = np.copy(depth_image)
+    masked_depth[object_mask == 0] = 0
+    return masked_depth
+
+def object_detection_callback(object_mask):
+    try:
+        depth_image = cv2.imread("path_to_your_depth_image.png", cv2.IMREAD_UNCHANGED)
+        masked_depth = mask_depth_image(depth_image, object_mask)
+        
+        bridge = CvBridge()
+        depth_image_msg = bridge.cv2_to_imgmsg(masked_depth, "passthrough")
+        
+        depth_image_publisher.publish(depth_image_msg)
+    except CvBridgeError as e:
+        print(e)
+
+if __name__ == "__main__":
+    rospy.init_node("depth_mask_publisher")
+    
+    depth_image_publisher = rospy.Publisher("/masked_depth_image", Image, queue_size=1)
+    object_mask = cv2.imread("path_to_your_object_mask.png", cv2.IMREAD_GRAYSCALE)
+    
+    object_detection_callback(object_mask)
+    
+    rospy.spin()
+#publish
+
+# ポイントクラウドに変換
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs.point_cloud2 as pc2
+
+def depth_image_callback(depth_image_msg):
+    try:
+        depth_image = pc2.read_points(depth_image_msg, field_names=("x", "y", "z"), skip_nans=True)
+        
+        point_cloud = np.array(list(depth_image))
+        # point_cloudは3次元座標の配列になります
+        
+        # ここでpoint_cloudを使用して必要な処理を行う
+        
+    except Exception as e:
+        print(e)
+
+if __name__ == "__main__":
+    rospy.init_node("point_cloud_converter")
+    
+    depth_image_topic = "/masked_depth_image"  # マスクされたデプス画像のトピック
+    rospy.Subscriber(depth_image_topic, PointCloud2, depth_image_callback)
+    
+    rospy.spin()
+
+
+# map変換
+import tf
+
+def transform_point_cloud(point_cloud, transform):
+    transformed_cloud = []
+    for point in point_cloud:
+        point_xyz = np.array([point[0], point[1], point[2], 1.0])
+        transformed_point = np.dot(transform, point_xyz)
+        transformed_cloud.append(transformed_point[:3])
+    return np.array(transformed_cloud)
+
+def depth_image_callback(depth_image_msg):
+    try:
+        depth_image = pc2.read_points(depth_image_msg, field_names=("x", "y", "z"), skip_nans=True)
+        point_cloud = np.array(list(depth_image))
+        
+        listener = tf.TransformListener()
+        try:
+            listener.waitForTransform("/map", "/camera_link", rospy.Time(), rospy.Duration(4.0))
+            (trans, rot) = listener.lookupTransform("/map", "/camera_link", rospy.Time(0))
+            
+            transform_matrix = tf.transformations.quaternion_matrix(rot)
+            transform_matrix[:3, 3] = trans
+            
+            transformed_cloud = transform_point_cloud(point_cloud, transform_matrix)
+            
+            # ここでtransformed_cloudを使用して必要な処理を行う
+            
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            pass
+        
+    except Exception as e:
+        print(e)
+
+if __name__ == "__main__":
+    rospy.init_node("point_cloud_converter")
+    
+    depth_image_topic = "/masked_depth_image"
+    rospy.Subscriber(depth_image_topic, PointCloud2, depth_image_callback)
+    
+    rospy.spin()
+
+
+#コストマップ反映
+
+from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import Point
+
+def update_costmap_with_obstacles(costmap, obstacle_positions, radius_cells):
+    data = costmap.data
+    width = costmap.info.width
+    height = costmap.info.height
+    resolution = costmap.info.resolution
+    
+    for obs_pos in obstacle_positions:
+        obs_x = int(obs_pos.x / resolution)
+        obs_y = int(obs_pos.y / resolution)
+        
+        for dx in range(-radius_cells, radius_cells+1):
+            for dy in range(-radius_cells, radius_cells+1):
+                new_x = obs_x + dx
+                new_y = obs_y + dy
+                if 0 <= new_x < width and 0 <= new_y < height:
+                    index = new_x + new_y * width
+                    data[index] = 100  # Set the cell to be occupied (adjust based on the cost range)
+    
+    costmap.data = data
+    costmap_publisher.publish(costmap)
+
+def obstacle_positions_callback(transformed_cloud):
+    obstacle_positions = []
+    for point in transformed_cloud:
+        if point[2] > 0.1:  # Filter out points near the ground
+            obstacle_positions.append(Point(point[0], point[1], 0.0))
+    
+    costmap = rospy.wait_for_message("/move_base/global_costmap/costmap", OccupancyGrid)
+    update_costmap_with_obstacles(costmap, obstacle_positions, radius_cells=3)
+
+if __name__ == "__main__":
+    rospy.init_node("costmap_updater")
+    
+    rospy.Subscriber("/transformed_point_cloud", PointCloud2, obstacle_positions_callback)
+    costmap_publisher = rospy.Publisher("/move_base/global_costmap/costmap_updates", OccupancyGrid, queue_size=1)
+    
+    rospy.spin()
+
+
+
+# ナビゲーション実装
+
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+
+def navigate_to_goal(goal_pose):
+    client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+    client.wait_for_server()
+    
+    goal = MoveBaseGoal()
+    goal.target_pose.header.frame_id = "map"
+    goal.target_pose.header.stamp = rospy.Time.now()
+    
+    goal.target_pose.pose.position.x = goal_pose[0]
+    goal.target_pose.pose.position.y = goal_pose[1]
+    goal.target_pose.pose.orientation.z = goal_pose[2]
+    goal.target_pose.pose.orientation.w = goal_pose[3]
+    
+    client.send_goal(goal)
+    client.wait_for_result()
+
+if __name__ == "__main__":
+    try:
+        rospy.init_node("navigation_node")
+        
+        # ここで目標位置の座標と姿勢を設定します
+        goal_pose = [x, y, z, w]  # x, yは目標位置の座標、z, wは目標姿勢のクォータニオン
+        
+        navigate_to_goal(goal_pose)
+        
+    except rospy.ROSInterruptException:
+        pass
+
