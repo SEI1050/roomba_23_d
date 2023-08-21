@@ -29,6 +29,6 @@ class Task1():
 
 if __name__ == '__main__':
     ag = Task1()
-    ag.set_goal(4.0, 3.5, 0.0)
+    ag.set_goal(4.0, 3.5, 90.0)
     res = ag.send_action()
     print(res)
