@@ -74,6 +74,7 @@ class DetectionMask:
             masked_depth.header = tmp_camera_info.header
             self.masked_depth_pub.publish(masked_depth)
             self.camera_info_pub.publish(tmp_camera_info)
+        print(*names.values())  #changed
 
 
 if __name__ == '__main__':
