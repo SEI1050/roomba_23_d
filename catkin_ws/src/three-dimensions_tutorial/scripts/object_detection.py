@@ -7,10 +7,13 @@ import cv2
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
+import time
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-
+first = [-1, 10 ** 9, -1, 10 ** 9]
+second = [-1, 10 ** 9, -1, 10 ** 9]
+fisright = False
 class ObjectDetection:
     def __init__(self):
         rospy.init_node('object_detection', anonymous=True)
@@ -24,7 +27,7 @@ class ObjectDetection:
         self.bridge = CvBridge()
         self.rgb_image = None
 
-        self.model = YOLO('yolov8n.pt')
+        self.model = YOLO('yolov8n-pose.pt')
 
     def callback_rgb(self, data):
         cv_array = self.bridge.imgmsg_to_cv2(data, 'bgr8')
@@ -36,12 +39,39 @@ class ObjectDetection:
                 continue
 
             results: List[Results] = self.model.predict(self.rgb_image)
+            keypoint = results[0].keypoints
+            #print(keypoint.data[:, 5:11])
+            first[0] = max(first[0], keypoint.data[0][9][0])
+            first[1] = min(first[1], keypoint.data[0][9][0])
+            first[2] = max(first[2], keypoint.data[0][10][0])
+            first[3] = min(first[3], keypoint.data[0][10][0])
+            second[0] = max(second[0], keypoint.data[1][9][0])
+            second[1] = min(second[1], keypoint.data[1][9][0])
+            second[2] = max(second[2], keypoint.data[1][10][0])
+            second[3] = min(second[3], keypoint.data[1][10][0])
+
+            fdif = max(first[0] - first[1], first[2] - first[3])
+            sdif = max(second[0] - second[1], second[2] - second[3])
+
+            if keypoint.data[0][9][0] > keypoint.data[1][9][0]:
+                fisright = True
+
+            t = 5
+            if fdif > t:
+                print('right' if fisright else 'left')
+                exit()
+            if sdif > t:
+                print('right' if not fisright else 'left')
+                exit()
+            
+
 
             # plot bounding box
             tmp_image = copy.deepcopy(self.rgb_image)
             for result in results:
                 boxes = result.boxes.cpu().numpy()
                 names = result.names
+
                 for xyxy, conf, cls in zip(boxes.xyxy, boxes.conf, boxes.cls):
                     if conf < 0.5:
                         continue
@@ -53,6 +83,8 @@ class ObjectDetection:
             # publish image
             detection_result = self.bridge.cv2_to_imgmsg(tmp_image, "bgr8")
             self.detection_result_pub.publish(detection_result)
+            time.sleep(0.1)
+        
 
 
 if __name__ == '__main__':
