@@ -11,7 +11,8 @@ from sensor_msgs.msg import CameraInfo, Image
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-
+ans = set()
+ans2 = set()
 class DetectionMask:
     def __init__(self):
         rospy.init_node('detection_mask', anonymous=True)
@@ -31,6 +32,7 @@ class DetectionMask:
         self.rgb_image, self.depth_image, self.camera_info = None, None, None
 
         self.model = YOLO('yolov8n.pt')
+       
 
     def callback_rgbd(self, data1, data2, data3):
         cv_array = self.bridge.imgmsg_to_cv2(data1, 'bgr8')
@@ -63,6 +65,8 @@ class DetectionMask:
                 cls_pred = boxes.cls[0]
                 tmp_rgb_image = cv2.rectangle(tmp_rgb_image, (x1, y1), (x2, y2), (0, 255, 0), 3)
                 tmp_rgb_image = cv2.putText(tmp_rgb_image, names[cls_pred], (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+                ans.add(names[cls_pred])
+
                 depth_mask[y1:y2, x1:x2] = 1
 
             # publish image
@@ -74,7 +78,18 @@ class DetectionMask:
             masked_depth.header = tmp_camera_info.header
             self.masked_depth_pub.publish(masked_depth)
             self.camera_info_pub.publish(tmp_camera_info)
-        print(*names.values())  #changed
+        #print(ans)
+        for x in ans:
+            if x == 'sports ball':
+                ans2.add('mini soccer ball')
+            if x == 'airplane' or 'skateboard':
+                ans2.add('toy plane')
+            if x == 'frisbee' or 'banana':
+                ans2.add('banana')
+            if x == 'vase':
+                ans2.add("chips can")
+            
+        print(ans2)
 
 
 if __name__ == '__main__':
