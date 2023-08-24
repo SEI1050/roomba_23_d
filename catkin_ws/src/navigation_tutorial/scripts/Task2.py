@@ -42,10 +42,10 @@ import time
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-first = [-1, 10 ** 9, -1, 10 ** 9]
-second = [-1, 10 ** 9, -1, 10 ** 9]
-fisright = False
-direction = ''
+first = [-1, 10 ** 9, -1, 10 ** 9] # 一人目 左手首の最大、最小 右手首の最大、最小　（x座標)
+second = [-1, 10 ** 9, -1, 10 ** 9] # 二人目 上に同じ
+fisright = False 
+#direction = ''
 ag = ActionGoal()
 class ObjectDetection:
     def __init__(self):
@@ -74,20 +74,20 @@ class ObjectDetection:
             results: List[Results] = self.model.predict(self.rgb_image)
             keypoint = results[0].keypoints
             #print(keypoint.data[:, 5:11])
-            first[0] = max(first[0], keypoint.data[0][9][0])
-            first[1] = min(first[1], keypoint.data[0][9][0])
-            first[2] = max(first[2], keypoint.data[0][10][0])
+            first[0] = max(first[0], keypoint.data[0][9][0])　# 左手首
+            first[1] = min(first[1], keypoint.data[0][9][0])　
+            first[2] = max(first[2], keypoint.data[0][10][0]) # 右手首
             first[3] = min(first[3], keypoint.data[0][10][0])
             second[0] = max(second[0], keypoint.data[1][9][0])
             second[1] = min(second[1], keypoint.data[1][9][0])
             second[2] = max(second[2], keypoint.data[1][10][0])
             second[3] = min(second[3], keypoint.data[1][10][0])
 
-            fdif = max(first[0] - first[1], first[2] - first[3])
-            sdif = max(second[0] - second[1], second[2] - second[3])
+            fdif = max(first[0] - first[1], first[2] - first[3])　# 一人目の手首の動き
+            sdif = max(second[0] - second[1], second[2] - second[3]) # 二人目の手首の動き
 
-            global fisright
-            fisright = False
+            global fisright　# 不要
+            fisright = False # 一人目が右 (x座標が大きい) かどうか
 
             if keypoint.data[0][9][0] > keypoint.data[1][9][0]:
                 fisright = True
