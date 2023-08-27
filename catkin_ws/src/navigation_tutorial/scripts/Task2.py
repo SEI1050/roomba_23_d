@@ -74,7 +74,7 @@ class ObjectDetection:
             results: List[Results] = self.model.predict(self.rgb_image)
             keypoint = results[0].keypoints
             #print(keypoint.data[:, 5:11])
-            first[0] = max(first[0], keypoint.data[0][9][0])　# 左手首
+            first[0] = max(first[0], keypoint.data[0][9][0]) # 左手首
             first[1] = min(first[1], keypoint.data[0][9][0])　
             first[2] = max(first[2], keypoint.data[0][10][0]) # 右手首
             first[3] = min(first[3], keypoint.data[0][10][0])
@@ -83,10 +83,10 @@ class ObjectDetection:
             second[2] = max(second[2], keypoint.data[1][10][0])
             second[3] = min(second[3], keypoint.data[1][10][0])
 
-            fdif = max(first[0] - first[1], first[2] - first[3])　# 一人目の手首の動き
+            fdif = max(first[0] - first[1], first[2] - first[3]) # 一人目の手首の動き
             sdif = max(second[0] - second[1], second[2] - second[3]) # 二人目の手首の動き
 
-            global fisright　# 不要
+            global fisright # 不要
             fisright = False # 一人目が右 (x座標が大きい) かどうか
 
             if keypoint.data[0][9][0] > keypoint.data[1][9][0]:
