@@ -75,7 +75,7 @@ class ObjectDetection:
             keypoint = results[0].keypoints
             #print(keypoint.data[:, 5:11])
             first[0] = max(first[0], keypoint.data[0][9][0]) # 左手首
-            first[1] = min(first[1], keypoint.data[0][9][0])　
+            first[1] = min(first[1], keypoint.data[0][9][0])
             first[2] = max(first[2], keypoint.data[0][10][0]) # 右手首
             first[3] = min(first[3], keypoint.data[0][10][0])
             second[0] = max(second[0], keypoint.data[1][9][0])
