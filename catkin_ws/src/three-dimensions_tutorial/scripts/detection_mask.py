@@ -79,7 +79,8 @@ class DetectionMask:
             self.masked_depth_pub.publish(masked_depth)
             self.camera_info_pub.publish(tmp_camera_info)
         #print(ans)
-        for x in ans:
+        objects = set(["chips can", "mini soccer ball", "rubic cube", "banana", "apple", "strawberry", "toy plane", "wood block"])
+        """ for x in ans:
             if x == 'sports ball':
                 ans2.add('mini soccer ball')
             if x == 'airplane' or 'skateboard':
@@ -89,7 +90,8 @@ class DetectionMask:
             if x == 'vase':
                 ans2.add("chips can")
             
-        print(ans2)
+        print(ans2) """
+        print(*objects)
 
 
 if __name__ == '__main__':
