@@ -91,7 +91,7 @@ class DetectionMask:
                 ans2.add("chips can")
             
         print(ans2) """
-        print(*objects)
+        print(", ".join(objects))
 
 
 if __name__ == '__main__':
