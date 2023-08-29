@@ -95,7 +95,7 @@ class ObjectDetection:
                     print(fisright,111111111111111111111111)
                 t = 8
                 if fdif > t:
-                    direction = 'right' if fisright else 'left'
+                    #direction = 'right' if fisright else 'left' 
                     print(111)
                     if fisright:
                         ag.set_goal(1.7, 3.5, 160)
@@ -108,7 +108,7 @@ class ObjectDetection:
 
                     break
                 elif sdif > t:
-                    direction = 'right' if not fisright else 'left'
+                    #direction = 'right' if not fisright else 'left'
                     print(222)
                     if not fisright:
                         ag.set_goal(1.7, 3.5, 160)
